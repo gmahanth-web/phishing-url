@@ -13,7 +13,7 @@ pinned: false
 
 A machine learning system that classifies URLs as **phishing** or **legitimate** using lexical (URL-structure-only) features and XGBoost — built to work in real time, without needing to visit or scrape the target page first.
 
-**Live demo:** https://phishing-url-detector.onrender.com
+**Live demo:** https://phishing-url-pap6.onrender.com
 
 *(Note: free-tier hosting spins down after inactivity — first load may take 30-50 seconds to wake up.)*
 
