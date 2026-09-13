@@ -76,6 +76,17 @@
     </div>
     <div id="recaptcha-container"></div>
   </div>
+
+  <div id="emailLinkBox" style="text-align:center; margin-top:20px;">
+    <div style="color:#6b7280; font-size:13px; margin-bottom:8px;">or sign in with a link sent to your email</div>
+    <div id="emailStep1">
+      <input id="emailInput" type="email" placeholder="you@example.com" style="padding:10px; border-radius:8px; border:1px solid #374151; background:#1f2937; color:#f3f4f6; width:220px;">
+      <button id="sendEmailLinkBtn" style="background:#374151; color:#f3f4f6; border:none; padding:10px 16px; border-radius:8px; cursor:pointer;">Send Link</button>
+    </div>
+    <div id="emailSentNote" style="display:none; color:#9ca3af; font-size:13px; margin-top:8px;">
+      Check your inbox and click the sign-in link to continue.
+    </div>
+  </div>
 </div>
 
 <!-- Main app: hidden until signed in -->
@@ -112,7 +123,8 @@
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
-           RecaptchaVerifier, signInWithPhoneNumber }
+           RecaptchaVerifier, signInWithPhoneNumber,
+           sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -173,6 +185,44 @@
       alert("Invalid code, try again.");
     }
   };
+
+  // ---------------- Email link sign-in ----------------
+  document.getElementById("sendEmailLinkBtn").onclick = async () => {
+    const email = document.getElementById("emailInput").value.trim();
+    if (!email) return alert("Enter your email address.");
+
+    const actionCodeSettings = {
+      url: window.location.href,
+      handleCodeInApp: true,
+    };
+
+    try {
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      window.localStorage.setItem("emailForSignIn", email);
+      document.getElementById("emailStep1").style.display = "none";
+      document.getElementById("emailSentNote").style.display = "block";
+    } catch (err) {
+      console.error(err);
+      alert("Failed to send sign-in link: " + err.message);
+    }
+  };
+
+  // If this page load IS the sign-in link being opened, complete the sign-in
+  if (isSignInWithEmailLink(auth, window.location.href)) {
+    let storedEmail = window.localStorage.getItem("emailForSignIn");
+    if (!storedEmail) {
+      storedEmail = window.prompt("Please confirm your email to complete sign-in:");
+    }
+    signInWithEmailLink(auth, storedEmail, window.location.href)
+      .then(() => {
+        window.localStorage.removeItem("emailForSignIn");
+        window.history.replaceState({}, document.title, window.location.pathname);
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("Sign-in link failed or expired: " + err.message);
+      });
+  }
 
   onAuthStateChanged(auth, (user) => {
     currentUser = user;
