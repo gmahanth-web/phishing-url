@@ -51,56 +51,23 @@
 </style>
 </head>
 <body>
-
-<!-- Login gate: shown until the user signs in -->
-<div id="loginGate" style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px;">
+<div class="wrap">
   <h1>🛡️ Phishing URL Detector</h1>
-  <div class="subtitle">Sign in to continue</div>
+  <div class="subtitle">Sign in to save your check history across sessions</div>
 
   <div class="auth-bar">
     <button id="signInBtn">
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.9 0 6.6 1.7 8.1 3.1l6-6C34.9 3.2 30 1 24 1 14.9 1 7.1 6.4 3.5 14.1l7.1 5.5C12.4 13.5 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.2 5.6C43.9 37.6 46.5 31.6 46.5 24.5z"/><path fill="#FBBC05" d="M10.6 19.6a14.5 14.5 0 000 8.8l-7.1 5.5A24 24 0 010 24c0-3.1.7-6 2-8.6z"/><path fill="#34A853" d="M24 46.5c6.5 0 12-2.1 15.9-5.7l-7.2-5.6c-2 1.4-4.7 2.3-8.7 2.3-6.3 0-11.6-4-13.5-9.6l-7.1 5.5C7.1 41.6 14.9 46.5 24 46.5z"/></svg>
       Sign in with Google
     </button>
-  </div>
-
-  <div id="phoneAuthBox" style="text-align:center; margin-top:10px;">
-    <div style="color:#6b7280; font-size:13px; margin-bottom:8px;">or sign in with phone number</div>
-    <div id="phoneStep1">
-      <input id="phoneInput" type="tel" placeholder="+91 9876543210" style="padding:10px; border-radius:8px; border:1px solid #374151; background:#1f2937; color:#f3f4f6; width:200px;">
-      <button id="sendCodeBtn" style="background:#374151; color:#f3f4f6; border:none; padding:10px 16px; border-radius:8px; cursor:pointer;">Send Code</button>
-    </div>
-    <div id="phoneStep2" style="display:none; margin-top:10px;">
-      <input id="otpInput" type="text" placeholder="Enter 6-digit code" style="padding:10px; border-radius:8px; border:1px solid #374151; background:#1f2937; color:#f3f4f6; width:200px;">
-      <button id="verifyCodeBtn" style="background:var(--accent); color:white; border:none; padding:10px 16px; border-radius:8px; cursor:pointer;">Verify</button>
-    </div>
-    <div id="recaptcha-container"></div>
-  </div>
-
-  <div id="emailLinkBox" style="text-align:center; margin-top:20px;">
-    <div style="color:#6b7280; font-size:13px; margin-bottom:8px;">or sign in with a link sent to your email</div>
-    <div id="emailStep1">
-      <input id="emailInput" type="email" placeholder="you@example.com" style="padding:10px; border-radius:8px; border:1px solid #374151; background:#1f2937; color:#f3f4f6; width:220px;">
-      <button id="sendEmailLinkBtn" style="background:#374151; color:#f3f4f6; border:none; padding:10px 16px; border-radius:8px; cursor:pointer;">Send Link</button>
-    </div>
-    <div id="emailSentNote" style="display:none; color:#9ca3af; font-size:13px; margin-top:8px;">
-      Check your inbox and click the sign-in link to continue.
-    </div>
-  </div>
-</div>
-
-<!-- Main app: hidden until signed in -->
-<div class="wrap" id="mainApp" style="display:none;">
-  <h1>🛡️ Phishing URL Detector</h1>
-  <div class="subtitle">Check any URL, and your history is saved to your account</div>
-
-  <div class="auth-bar">
-    <div id="userInfo" style="display:flex;">
+    <div id="userInfo">
       <img id="userPhoto" src="" alt="">
       <span id="userName"></span>
       <button id="signOutBtn">Sign out</button>
     </div>
   </div>
+
+  <div class="signin-note" id="guestNote">Not signed in — you can still check URLs, but history won't be saved.</div>
 
   <div class="input-row">
     <input id="urlInput" type="text" placeholder="e.g. https://google.com">
@@ -120,13 +87,10 @@
 
 <!-- Firebase SDK -->
 <script type="module">
-
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
-           RecaptchaVerifier, signInWithPhoneNumber,
-           sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink }
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp }
+  import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   // ---------------------------------------------------------------------
@@ -134,12 +98,12 @@
   // (Firebase Console → Project Settings → General → Your apps → SDK config)
   // ---------------------------------------------------------------------
   const firebaseConfig = {
-    apiKey: "AIzaSyD2j4-Y1wvX1X54FrT7cte-cQv6IEFeaZA",
-    authDomain: "phishing-url-detector-f93a0.firebaseapp.com",
-    projectId: "phishing-url-detector-f93a0",
-    storageBucket: "phishing-url-detector-f93a0.firebasestorage.app",
-    messagingSenderId: "810147676792",
-    appId: "1:810147676792:web:5d0dd0c96d6233dd9d638d"
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
   };
 
   const fbApp = initializeApp(firebaseConfig);
@@ -152,113 +116,58 @@
   document.getElementById("signInBtn").onclick = () => signInWithPopup(auth, provider).catch(console.error);
   document.getElementById("signOutBtn").onclick = () => signOut(auth);
 
-  // ---------------- Phone number sign-in ----------------
-  let confirmationResult = null;
-
-  window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-    size: "invisible",
-  });
-
-  document.getElementById("sendCodeBtn").onclick = async () => {
-    const phone = document.getElementById("phoneInput").value.trim();
-    if (!phone) return alert("Enter a phone number including country code, e.g. +919876543210");
-    try {
-      confirmationResult = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
-      document.getElementById("phoneStep1").style.display = "none";
-      document.getElementById("phoneStep2").style.display = "block";
-    } catch (err) {
-      console.error(err);
-      alert("Failed to send code: " + err.message);
-    }
-  };
-
-  document.getElementById("verifyCodeBtn").onclick = async () => {
-    const otp = document.getElementById("otpInput").value.trim();
-    if (!otp || !confirmationResult) return;
-    try {
-      await confirmationResult.confirm(otp);
-      document.getElementById("phoneStep1").style.display = "block";
-      document.getElementById("phoneStep2").style.display = "none";
-      document.getElementById("phoneAuthBox").style.display = "none";
-    } catch (err) {
-      console.error(err);
-      alert("Invalid code, try again.");
-    }
-  };
-
-  // ---------------- Email link sign-in ----------------
-  document.getElementById("sendEmailLinkBtn").onclick = async () => {
-    const email = document.getElementById("emailInput").value.trim();
-    if (!email) return alert("Enter your email address.");
-
-    const actionCodeSettings = {
-      url: window.location.href,
-      handleCodeInApp: true,
-    };
-
-    try {
-      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-      window.localStorage.setItem("emailForSignIn", email);
-      document.getElementById("emailStep1").style.display = "none";
-      document.getElementById("emailSentNote").style.display = "block";
-    } catch (err) {
-      console.error(err);
-      alert("Failed to send sign-in link: " + err.message);
-    }
-  };
-
-  // If this page load IS the sign-in link being opened, complete the sign-in
-  if (isSignInWithEmailLink(auth, window.location.href)) {
-    let storedEmail = window.localStorage.getItem("emailForSignIn");
-    if (!storedEmail) {
-      storedEmail = window.prompt("Please confirm your email to complete sign-in:");
-    }
-    signInWithEmailLink(auth, storedEmail, window.location.href)
-      .then(() => {
-        window.localStorage.removeItem("emailForSignIn");
-        window.history.replaceState({}, document.title, window.location.pathname);
-      })
-      .catch((err) => {
-        console.error(err);
-        alert("Sign-in link failed or expired: " + err.message);
-      });
-  }
-
   onAuthStateChanged(auth, (user) => {
     currentUser = user;
     if (user) {
-      document.getElementById("loginGate").style.display = "none";
-      document.getElementById("mainApp").style.display = "block";
+      document.getElementById("signInBtn").style.display = "none";
+      document.getElementById("guestNote").style.display = "none";
+      document.getElementById("userInfo").style.display = "flex";
       document.getElementById("userPhoto").src = user.photoURL || "";
-      document.getElementById("userName").innerText = user.displayName || user.email || user.phoneNumber;
+      document.getElementById("userName").innerText = user.displayName || user.email;
       loadHistory(user.uid);
     } else {
-      document.getElementById("loginGate").style.display = "flex";
-      document.getElementById("mainApp").style.display = "none";
+      document.getElementById("signInBtn").style.display = "flex";
+      document.getElementById("guestNote").style.display = "block";
+      document.getElementById("userInfo").style.display = "none";
+      document.getElementById("historyBody").innerHTML = "<tr><td colspan='4' style='color:#6b7280;'>Sign in to see saved history.</td></tr>";
     }
   });
 
   function loadHistory(uid) {
-    const q = query(collection(db, "checks"), where("uid", "==", uid), orderBy("createdAt", "desc"), limit(10));
-    onSnapshot(q, (snapshot) => {
-      const rows = [];
-      snapshot.forEach((doc) => {
-        const d = doc.data();
-        const time = d.createdAt?.toDate ? d.createdAt.toDate().toLocaleTimeString() : "";
-        const icon = d.prediction === "Legitimate" ? "✅" : "🚨";
-        rows.push(`<tr><td>${time}</td><td style="word-break:break-all;">${d.url}</td><td>${icon} ${d.prediction}</td><td>${d.confidence}%</td></tr>`);
-      });
-      document.getElementById("historyBody").innerHTML = rows.length ? rows.join("") : "<tr><td colspan='4' style='color:#6b7280;'>No checks yet.</td></tr>";
-    });
+    // Each user's checks live in their own subcollection (users/{uid}/checks)
+    // instead of one shared "checks" collection filtered by a uid field.
+    // That avoids needing a Firestore composite index (uid + createdAt),
+    // which is what was silently breaking history before: the old query
+    // required an index that was never created, so it failed on every
+    // read with no visible error, and just looked like "no history."
+    const q = query(collection(db, "users", uid, "checks"), orderBy("createdAt", "desc"), limit(10));
+    onSnapshot(
+      q,
+      (snapshot) => {
+        const rows = [];
+        snapshot.forEach((doc) => {
+          const d = doc.data();
+          const time = d.createdAt?.toDate ? d.createdAt.toDate().toLocaleTimeString() : "";
+          const icon = d.prediction === "Legitimate" ? "✅" : "🚨";
+          rows.push(`<tr><td>${time}</td><td style="word-break:break-all;">${d.url}</td><td>${icon} ${d.prediction}</td><td>${d.confidence}%</td></tr>`);
+        });
+        document.getElementById("historyBody").innerHTML = rows.length ? rows.join("") : "<tr><td colspan='4' style='color:#6b7280;'>No checks yet.</td></tr>";
+      },
+      (error) => {
+        // Surface query/permission errors instead of failing silently.
+        console.error("History query failed:", error);
+        document.getElementById("historyBody").innerHTML =
+          `<tr><td colspan='4' style='color:#ef4444;'>Couldn't load history: ${error.message}</td></tr>`;
+      }
+    );
   }
 
   async function saveCheck(url, prediction, confidence) {
     if (!currentUser) return;
-    await addDoc(collection(db, "checks"), {
-      uid: currentUser.uid,
+    await addDoc(collection(db, "users", currentUser.uid, "checks"), {
       url, prediction, confidence,
       createdAt: serverTimestamp(),
-    });
+    }).catch((err) => console.error("Failed to save check:", err));
   }
 
   async function checkUrl() {
