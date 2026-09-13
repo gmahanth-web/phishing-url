@@ -30,6 +30,22 @@
   #userInfo img { width: 32px; height: 32px; border-radius: 50%; }
   #signOutBtn { background: #374151; color: #f3f4f6; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
 
+  .divider { text-align: center; color: #6b7280; font-size: 12px; margin: 4px 0 16px; }
+  .email-auth-box { max-width: 320px; margin: 0 auto 20px; }
+  .email-auth-box input {
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #374151;
+    background: #1f2937; color: #f3f4f6; font-size: 14px; margin-bottom: 8px; box-sizing: border-box;
+  }
+  .email-auth-buttons { display: flex; gap: 8px; }
+  .email-auth-buttons button {
+    flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; font-size: 13px;
+  }
+  #emailLoginBtn { background: var(--accent); color: #fff; }
+  #emailLoginBtn:hover { background: var(--accent2); }
+  #emailSignUpBtn { background: #374151; color: #f3f4f6; }
+  #emailSignUpBtn:hover { background: #4b5563; }
+  #emailAuthError { color: #ef4444; font-size: 12px; text-align: center; margin-top: 6px; min-height: 14px; }
+
   .input-row { display: flex; gap: 10px; margin-bottom: 20px; }
   #urlInput { flex: 1; padding: 12px 14px; border-radius: 10px; border: 1px solid #374151; background: #1f2937; color: #f3f4f6; font-size: 15px; }
   #checkBtn { background: var(--accent); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; }
@@ -69,6 +85,17 @@
 
   <div class="signin-note" id="guestNote">Not signed in — you can still check URLs, but history won't be saved.</div>
 
+  <div class="divider" id="emailDivider">or sign in with email and password</div>
+  <div class="email-auth-box" id="emailAuthBox">
+    <input id="emailInput" type="email" placeholder="Email address" autocomplete="email">
+    <input id="passwordInput" type="password" placeholder="Password (6+ characters)" autocomplete="current-password">
+    <div class="email-auth-buttons">
+      <button id="emailLoginBtn">Log in</button>
+      <button id="emailSignUpBtn">Sign up</button>
+    </div>
+    <div id="emailAuthError"></div>
+  </div>
+
   <div class="input-row">
     <input id="urlInput" type="text" placeholder="e.g. https://google.com">
     <button id="checkBtn">Check URL</button>
@@ -88,7 +115,8 @@
 <!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
+           createUserWithEmailAndPassword, signInWithEmailAndPassword }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -114,13 +142,68 @@
   let currentUser = null;
 
   document.getElementById("signInBtn").onclick = () => signInWithPopup(auth, provider).catch(console.error);
-  document.getElementById("signOutBtn").onclick = () => signOut(auth);
+  document.getElementById("signOutBtn").onclick = () => {
+    signOut(auth);
+    document.getElementById("emailInput").value = "";
+    document.getElementById("passwordInput").value = "";
+    setEmailAuthError("");
+  };
+
+  // ---------------- Email / password sign-in ----------------
+  function friendlyAuthError(err) {
+    const map = {
+      "auth/email-already-in-use": "An account with that email already exists — try logging in instead.",
+      "auth/invalid-email": "That doesn't look like a valid email address.",
+      "auth/weak-password": "Password must be at least 6 characters.",
+      "auth/invalid-credential": "Incorrect email or password.",
+      "auth/wrong-password": "Incorrect email or password.",
+      "auth/user-not-found": "No account found with that email — try signing up instead.",
+      "auth/too-many-requests": "Too many attempts — please wait a moment and try again.",
+    };
+    return map[err.code] || err.message;
+  }
+
+  function setEmailAuthError(message) {
+    document.getElementById("emailAuthError").innerText = message || "";
+  }
+
+  document.getElementById("emailSignUpBtn").onclick = async () => {
+    const email = document.getElementById("emailInput").value.trim();
+    const password = document.getElementById("passwordInput").value;
+    setEmailAuthError("");
+    if (!email || !password) return setEmailAuthError("Enter an email and password first.");
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+      console.error(err);
+      setEmailAuthError(friendlyAuthError(err));
+    }
+  };
+
+  document.getElementById("emailLoginBtn").onclick = async () => {
+    const email = document.getElementById("emailInput").value.trim();
+    const password = document.getElementById("passwordInput").value;
+    setEmailAuthError("");
+    if (!email || !password) return setEmailAuthError("Enter an email and password first.");
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+      console.error(err);
+      setEmailAuthError(friendlyAuthError(err));
+    }
+  };
+
+  document.getElementById("passwordInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("emailLoginBtn").click();
+  });
 
   onAuthStateChanged(auth, (user) => {
     currentUser = user;
     if (user) {
       document.getElementById("signInBtn").style.display = "none";
       document.getElementById("guestNote").style.display = "none";
+      document.getElementById("emailDivider").style.display = "none";
+      document.getElementById("emailAuthBox").style.display = "none";
       document.getElementById("userInfo").style.display = "flex";
       document.getElementById("userPhoto").src = user.photoURL || "";
       document.getElementById("userName").innerText = user.displayName || user.email;
@@ -128,6 +211,8 @@
     } else {
       document.getElementById("signInBtn").style.display = "flex";
       document.getElementById("guestNote").style.display = "block";
+      document.getElementById("emailDivider").style.display = "block";
+      document.getElementById("emailAuthBox").style.display = "block";
       document.getElementById("userInfo").style.display = "none";
       document.getElementById("historyBody").innerHTML = "<tr><td colspan='4' style='color:#6b7280;'>Sign in to see saved history.</td></tr>";
     }
