@@ -3,121 +3,288 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Phishing URL Detector</title>
+<title>URL Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root { --accent: #6366f1; --accent2: #8b5cf6; }
+  :root {
+    --bg: #0a0e14;
+    --panel: #10151f;
+    --panel-2: #161d2b;
+    --border: #232c3d;
+    --border-soft: #1a2130;
+    --text: #e7eaf0;
+    --text-dim: #8991a3;
+    --text-faint: #5b6376;
+    --amber: #f0b429;
+    --amber-dim: #8a6a1f;
+    --safe: #3ecf8e;
+    --safe-bg: #0e1f18;
+    --danger: #ff6b6b;
+    --danger-bg: #241213;
+    --sans: 'IBM Plex Sans', -apple-system, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  }
   * { box-sizing: border-box; }
   body {
-    font-family: -apple-system, "Segoe UI", sans-serif;
-    background: radial-gradient(circle at top, #1a1a2e, #0f0f1a);
-    color: #f3f4f6; margin: 0; min-height: 100vh;
+    font-family: var(--sans);
+    background: var(--bg);
+    background-image:
+      linear-gradient(var(--border-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border-soft) 1px, transparent 1px);
+    background-size: 42px 42px;
+    background-position: center top;
+    color: var(--text);
+    margin: 0;
+    min-height: 100vh;
   }
-  .wrap { max-width: 640px; margin: 0 auto; padding: 40px 20px; }
-  h1 {
-    text-align: center; font-size: 32px; font-weight: 800;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    margin-bottom: 4px;
+  .wrap { max-width: 620px; margin: 0 auto; padding: 48px 20px 80px; }
+
+  /* ---------- Header ---------- */
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .brand svg { flex-shrink: 0; }
+  .brand h1 {
+    font-size: 21px; font-weight: 600; letter-spacing: -0.01em; margin: 0; color: var(--text);
   }
-  .subtitle { text-align: center; color: #9ca3af; margin-bottom: 24px; }
+  .subtitle { color: var(--text-dim); font-size: 14.5px; margin: 0 0 32px 36px; line-height: 1.5; max-width: 46ch; }
 
-  .auth-bar { display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 24px; }
-  #signInBtn {
-    background: #fff; color: #1f2937; border: none; padding: 10px 18px;
-    border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;
+  /* ---------- Panels (shared) ---------- */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
   }
-  #userInfo { display: none; align-items: center; gap: 10px; }
-  #userInfo img { width: 32px; height: 32px; border-radius: 50%; }
-  #signOutBtn { background: #374151; color: #f3f4f6; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+  .panel-pad { padding: 22px; }
 
-  .divider { text-align: center; color: #6b7280; font-size: 12px; margin: 4px 0 16px; }
-  .email-auth-box { max-width: 320px; margin: 0 auto 20px; }
-  .email-auth-box input {
-    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #374151;
-    background: #1f2937; color: #f3f4f6; font-size: 14px; margin-bottom: 8px; box-sizing: border-box;
+  /* ---------- Auth: signed out ---------- */
+  #authPanel { margin-bottom: 28px; }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
   }
-  .email-auth-buttons { display: flex; gap: 8px; }
-  .email-auth-buttons button {
-    flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; font-size: 13px;
+  .panel-head span { font-size: 12.5px; color: var(--text-faint); font-family: var(--mono); }
+
+  #googleBtn {
+    width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+    padding: 11px; border-radius: 5px; font-size: 14px; font-weight: 500; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: border-color .15s ease, background .15s ease;
   }
-  #emailLoginBtn { background: var(--accent); color: #fff; }
-  #emailLoginBtn:hover { background: var(--accent2); }
-  #emailSignUpBtn { background: #374151; color: #f3f4f6; }
-  #emailSignUpBtn:hover { background: #4b5563; }
-  #emailAuthError { color: #ef4444; font-size: 12px; text-align: center; margin-top: 6px; min-height: 14px; }
+  #googleBtn:hover { border-color: #3a4559; background: #1c2436; }
 
-  .input-row { display: flex; gap: 10px; margin-bottom: 20px; }
-  #urlInput { flex: 1; padding: 12px 14px; border-radius: 10px; border: 1px solid #374151; background: #1f2937; color: #f3f4f6; font-size: 15px; }
-  #checkBtn { background: var(--accent); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; }
-  #checkBtn:hover { background: var(--accent2); }
+  .divider { display: flex; align-items: center; gap: 12px; color: var(--text-faint); font-size: 12.5px; margin: 18px 0; }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 
-  #result { display: none; border-radius: 16px; padding: 26px; text-align: center; margin-bottom: 24px; }
-  .legit { background: linear-gradient(135deg, #0f2e1e, #123d27); box-shadow: 0 6px 24px rgba(16,185,129,0.18); }
-  .phish { background: linear-gradient(135deg, #2e1414, #3d1717); box-shadow: 0 6px 24px rgba(239,68,68,0.2); }
-  .result-icon { font-size: 44px; }
-  .result-label { font-size: 22px; font-weight: 700; margin-top: 4px; }
-  .result-conf { font-size: 14px; color: #d1d5db; margin-top: 6px; }
-  .result-url { font-size: 12px; color: #9ca3af; margin-top: 10px; word-break: break-all; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12.5px; color: var(--text-dim); margin-bottom: 6px; }
+  .field input {
+    width: 100%; padding: 10px 12px; border-radius: 5px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 14px; font-family: var(--sans);
+    transition: border-color .15s ease;
+  }
+  .field input:focus { outline: none; border-color: var(--amber-dim); }
 
-  .history-box { background: #16161f; border-radius: 12px; padding: 16px; }
-  .history-box h3 { margin-top: 0; font-size: 15px; color: #d1d5db; }
+  .auth-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .btn {
+    padding: 10px 16px; border-radius: 5px; border: 1px solid transparent; font-weight: 500;
+    font-size: 13.5px; cursor: pointer; font-family: var(--sans);
+  }
+  .btn-primary { background: var(--amber); color: #1a1305; }
+  .btn-primary:hover { background: #f7c34f; }
+  .btn-ghost { background: transparent; color: var(--text-dim); border-color: var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: #3a4559; }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  .auth-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; }
+  .link-btn {
+    background: none; border: none; color: var(--text-faint); font-size: 12.5px; cursor: pointer;
+    padding: 0; text-decoration: underline; text-underline-offset: 2px;
+  }
+  .link-btn:hover { color: var(--text-dim); }
+  .form-msg { font-size: 12.5px; margin-top: 10px; min-height: 16px; }
+  .form-msg.err { color: var(--danger); }
+  .form-msg.ok { color: var(--safe); }
+
+  /* ---------- Auth: signed in ---------- */
+  #userBar {
+    display: none; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 16px; margin-bottom: 28px;
+  }
+  .user-id { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .user-id img { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; }
+  .avatar-fallback {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-dim); flex-shrink: 0;
+  }
+  .user-id .who { min-width: 0; }
+  .user-id .name { font-size: 13.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-id .status { font-size: 11.5px; color: var(--text-faint); }
+  .user-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .icon-btn {
+    background: none; border: 1px solid transparent; color: var(--text-faint); width: 30px; height: 30px;
+    border-radius: 5px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--border); background: var(--panel-2); }
+
+  #verifyBanner {
+    display: none; font-size: 12.5px; color: var(--amber); background: rgba(240,180,41,0.08);
+    border: 1px solid var(--amber-dim); border-radius: 5px; padding: 10px 14px; margin: -18px 0 28px;
+  }
+  #verifyBanner a { color: var(--amber); }
+
+  /* ---------- Change password panel ---------- */
+  #pwPanel { display: none; margin-bottom: 28px; overflow: hidden; }
+  #pwPanel .panel-pad { padding-top: 18px; }
+  .pw-note { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+
+  /* ---------- Scanner ---------- */
+  .scan-row { display: flex; gap: 8px; margin-bottom: 24px; }
+  #urlInput {
+    flex: 1; padding: 13px 14px; border-radius: 5px; border: 1px solid var(--border);
+    background: var(--panel); color: var(--text); font-size: 14px; font-family: var(--mono);
+  }
+  #urlInput:focus { outline: none; border-color: var(--amber-dim); }
+  #urlInput::placeholder { color: var(--text-faint); }
+  #checkBtn {
+    background: var(--amber); color: #1a1305; border: none; padding: 13px 20px; border-radius: 5px;
+    font-weight: 600; font-size: 13.5px; cursor: pointer; position: relative; overflow: hidden; white-space: nowrap;
+  }
+  #checkBtn:hover { background: #f7c34f; }
+  #checkBtn:disabled { cursor: default; color: #1a1305; }
+  #checkBtn .sweep {
+    position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+    transform: translateX(-100%); display: none;
+  }
+  #checkBtn.scanning .sweep { display: block; animation: sweep 1s linear infinite; }
+  @keyframes sweep { to { transform: translateX(100%); } }
+
+  #result { display: none; border-radius: 6px; padding: 22px; margin-bottom: 28px; border: 1px solid; border-left-width: 3px; }
+  #result.legit { background: var(--safe-bg); border-color: var(--border); border-left-color: var(--safe); }
+  #result.phish { background: var(--danger-bg); border-color: var(--border); border-left-color: var(--danger); }
+  .result-top { display: flex; align-items: center; justify-content: space-between; }
+  .result-label { font-size: 15px; font-weight: 600; }
+  #result.legit .result-label { color: var(--safe); }
+  #result.phish .result-label { color: var(--danger); }
+  .result-conf { font-size: 12.5px; color: var(--text-dim); font-family: var(--mono); }
+  .result-url { font-size: 13px; color: var(--text-dim); margin-top: 10px; word-break: break-all; font-family: var(--mono); }
+
+  /* ---------- History ---------- */
+  .history-box .panel-head span { font-family: var(--mono); }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #262633; }
-  .signin-note { text-align: center; color: #6b7280; font-size: 13px; margin-top: 10px; }
+  th {
+    text-align: left; padding: 10px 18px; color: var(--text-faint); font-weight: 500; font-size: 11.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  td { text-align: left; padding: 10px 18px; border-bottom: 1px solid var(--border-soft); color: var(--text-dim); }
+  td.url-cell { font-family: var(--mono); color: var(--text); word-break: break-all; }
+  tr:last-child td { border-bottom: none; }
+  .empty-row td { color: var(--text-faint); text-align: center; padding: 24px 18px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #checkBtn.scanning .sweep { animation: none; display: none; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>🛡️ Phishing URL Detector</h1>
-  <div class="subtitle">Sign in to save your check history across sessions</div>
 
-  <div class="auth-bar">
-    <button id="signInBtn">
-      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.9 0 6.6 1.7 8.1 3.1l6-6C34.9 3.2 30 1 24 1 14.9 1 7.1 6.4 3.5 14.1l7.1 5.5C12.4 13.5 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.2 5.6C43.9 37.6 46.5 31.6 46.5 24.5z"/><path fill="#FBBC05" d="M10.6 19.6a14.5 14.5 0 000 8.8l-7.1 5.5A24 24 0 010 24c0-3.1.7-6 2-8.6z"/><path fill="#34A853" d="M24 46.5c6.5 0 12-2.1 15.9-5.7l-7.2-5.6c-2 1.4-4.7 2.3-8.7 2.3-6.3 0-11.6-4-13.5-9.6l-7.1 5.5C7.1 41.6 14.9 46.5 24 46.5z"/></svg>
-      Sign in with Google
-    </button>
-    <div id="userInfo">
-      <img id="userPhoto" src="" alt="">
-      <span id="userName"></span>
-      <button id="signOutBtn">Sign out</button>
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2 4 5v6c0 5 3.4 8.7 8 9 4.6-.3 8-4 8-9V5l-8-3Z" stroke="#f0b429" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M9 12l2 2 4-4.5" stroke="#f0b429" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h1>URL Scanner</h1>
+  </div>
+  <p class="subtitle">Paste a link before you open it. Sign in and each check is saved to your history.</p>
+
+  <!-- Signed-out auth -->
+  <div class="panel" id="authPanel">
+    <div class="panel-head"><span>sign in</span></div>
+    <div class="panel-pad">
+      <button id="googleBtn">
+        <svg width="17" height="17" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.9 0 6.6 1.7 8.1 3.1l6-6C34.9 3.2 30 1 24 1 14.9 1 7.1 6.4 3.5 14.1l7.1 5.5C12.4 13.5 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.2 5.6C43.9 37.6 46.5 31.6 46.5 24.5z"/><path fill="#FBBC05" d="M10.6 19.6a14.5 14.5 0 000 8.8l-7.1 5.5A24 24 0 010 24c0-3.1.7-6 2-8.6z"/><path fill="#34A853" d="M24 46.5c6.5 0 12-2.1 15.9-5.7l-7.2-5.6c-2 1.4-4.7 2.3-8.7 2.3-6.3 0-11.6-4-13.5-9.6l-7.1 5.5C7.1 41.6 14.9 46.5 24 46.5z"/></svg>
+        Continue with Google
+      </button>
+
+      <div class="divider">or use email</div>
+
+      <form id="emailAuthForm" novalidate>
+        <div class="field">
+          <label for="emailInput">Email</label>
+          <input id="emailInput" type="email" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="passwordInput">Password</label>
+          <input id="passwordInput" type="password" autocomplete="current-password" required minlength="6">
+        </div>
+        <div class="auth-actions">
+          <button id="emailLoginBtn" type="submit" class="btn btn-primary">Log in</button>
+          <button id="emailSignUpBtn" type="submit" class="btn btn-ghost">Sign up</button>
+        </div>
+        <div class="auth-foot">
+          <button type="button" class="link-btn" id="forgotBtn">Forgot password?</button>
+        </div>
+        <div class="form-msg" id="emailAuthMsg"></div>
+      </form>
     </div>
   </div>
 
-  <div class="signin-note" id="guestNote">Not signed in — you can still check URLs, but history won't be saved.</div>
-
-  <div class="divider" id="emailDivider">or sign in with email and password</div>
-  <div class="email-auth-box" id="emailAuthBox">
-    <input id="emailInput" type="email" placeholder="Email address" autocomplete="email">
-    <input id="passwordInput" type="password" placeholder="Password (6+ characters)" autocomplete="current-password">
-    <div class="email-auth-buttons">
-      <button id="emailLoginBtn">Log in</button>
-      <button id="emailSignUpBtn">Sign up</button>
+  <!-- Signed-in bar -->
+  <div class="panel" id="userBar">
+    <div class="user-id">
+      <img id="userPhoto" src="" alt="" style="display:none;">
+      <div class="avatar-fallback" id="userInitial" style="display:none;"></div>
+      <div class="who">
+        <div class="name" id="userName"></div>
+        <div class="status">Signed in</div>
+      </div>
     </div>
-    <div id="emailAuthError"></div>
+    <div class="user-actions">
+      <button class="icon-btn" id="pwToggleBtn" title="Change password" aria-label="Change password">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 15v3m-5-3h10a2 2 0 002-2v-3a2 2 0 00-2-2H7a2 2 0 00-2 2v3a2 2 0 002 2z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 8V6a4 4 0 118 0v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <button class="icon-btn" id="signOutBtn" title="Sign out" aria-label="Sign out">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
   </div>
 
-  <div class="input-row">
-    <input id="urlInput" type="text" placeholder="e.g. https://google.com">
-    <button id="checkBtn">Check URL</button>
+  <div id="verifyBanner">
+    Verify your email to confirm it's yours — <a href="#" id="resendVerifyLink">resend verification email</a>
+  </div>
+
+  <!-- Change password -->
+  <div class="panel" id="pwPanel">
+    <div class="panel-head"><span>change password</span></div>
+    <div class="panel-pad" id="pwPanelBody"><!-- filled by JS: form or google-account note --></div>
+  </div>
+
+  <!-- Scanner -->
+  <div class="scan-row">
+    <input id="urlInput" type="text" placeholder="https://example.com/login">
+    <button id="checkBtn"><span class="sweep"></span><span class="label">Scan</span></button>
   </div>
 
   <div id="result"></div>
 
-  <div class="history-box">
-    <h3>📜 Your History</h3>
+  <div class="panel history-box">
+    <div class="panel-head"><span>history</span></div>
     <table id="historyTable">
       <thead><tr><th>Time</th><th>URL</th><th>Result</th><th>Confidence</th></tr></thead>
-      <tbody id="historyBody"><tr><td colspan="4" style="color:#6b7280;">No checks yet.</td></tr></tbody>
+      <tbody id="historyBody"><tr class="empty-row"><td colspan="4">Sign in to save your checks here.</td></tr></tbody>
     </table>
   </div>
+
 </div>
 
 <!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
-           createUserWithEmailAndPassword, signInWithEmailAndPassword }
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import {
+    getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
+    createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification,
+    sendPasswordResetEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -141,12 +308,16 @@
 
   let currentUser = null;
 
-  document.getElementById("signInBtn").onclick = () => signInWithPopup(auth, provider).catch(console.error);
-  document.getElementById("signOutBtn").onclick = () => {
+  const $ = (id) => document.getElementById(id);
+
+  // ---------------- Google sign-in ----------------
+  $("googleBtn").onclick = () => signInWithPopup(auth, provider).catch((err) => setEmailAuthMsg(friendlyAuthError(err), true));
+  $("signOutBtn").onclick = () => {
     signOut(auth);
-    document.getElementById("emailInput").value = "";
-    document.getElementById("passwordInput").value = "";
-    setEmailAuthError("");
+    $("emailInput").value = "";
+    $("passwordInput").value = "";
+    setEmailAuthMsg("");
+    $("pwPanel").style.display = "none";
   };
 
   // ---------------- Email / password sign-in ----------------
@@ -159,72 +330,177 @@
       "auth/wrong-password": "Incorrect email or password.",
       "auth/user-not-found": "No account found with that email — try signing up instead.",
       "auth/too-many-requests": "Too many attempts — please wait a moment and try again.",
+      "auth/missing-password": "Enter a password.",
     };
     return map[err.code] || err.message;
   }
 
-  function setEmailAuthError(message) {
-    document.getElementById("emailAuthError").innerText = message || "";
+  function setEmailAuthMsg(message, isErr) {
+    const el = $("emailAuthMsg");
+    el.innerText = message || "";
+    el.className = "form-msg" + (message ? (isErr === false ? " ok" : " err") : "");
   }
 
-  document.getElementById("emailSignUpBtn").onclick = async () => {
-    const email = document.getElementById("emailInput").value.trim();
-    const password = document.getElementById("passwordInput").value;
-    setEmailAuthError("");
-    if (!email || !password) return setEmailAuthError("Enter an email and password first.");
+  $("emailAuthForm").addEventListener("submit", async (e) => {
+    e.preventDefault(); // a real form submit is what lets the browser's password
+    // manager recognize this as a login and offer to save the credentials.
+    const email = $("emailInput").value.trim();
+    const password = $("passwordInput").value;
+    const action = e.submitter?.id === "emailSignUpBtn" ? "signup" : "login";
+    setEmailAuthMsg("");
+    if (!email || !password) return setEmailAuthMsg("Enter an email and password first.", true);
+
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      if (action === "signup") {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await sendEmailVerification(cred.user);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
     } catch (err) {
       console.error(err);
-      setEmailAuthError(friendlyAuthError(err));
+      setEmailAuthMsg(friendlyAuthError(err), true);
     }
-  };
-
-  document.getElementById("emailLoginBtn").onclick = async () => {
-    const email = document.getElementById("emailInput").value.trim();
-    const password = document.getElementById("passwordInput").value;
-    setEmailAuthError("");
-    if (!email || !password) return setEmailAuthError("Enter an email and password first.");
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      console.error(err);
-      setEmailAuthError(friendlyAuthError(err));
-    }
-  };
-
-  document.getElementById("passwordInput").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") document.getElementById("emailLoginBtn").click();
   });
 
+  $("forgotBtn").onclick = async () => {
+    const email = $("emailInput").value.trim();
+    if (!email) return setEmailAuthMsg("Enter your email above first, then click \u201cForgot password?\u201d again.", true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setEmailAuthMsg("Password reset email sent — check your inbox.", false);
+    } catch (err) {
+      console.error(err);
+      setEmailAuthMsg(friendlyAuthError(err), true);
+    }
+  };
+
+  // ---------------- Change password (signed-in users) ----------------
+  function isGoogleOnly(user) {
+    return user.providerData.length > 0 && user.providerData.every((p) => p.providerId === "google.com");
+  }
+
+  function renderPwPanelBody() {
+    const body = $("pwPanelBody");
+    if (!currentUser) { body.innerHTML = ""; return; }
+
+    if (isGoogleOnly(currentUser)) {
+      body.innerHTML = `<p class="pw-note">Your account uses Google Sign-In, so there's no separate password to change here — manage it from your Google Account settings instead.</p>`;
+      return;
+    }
+
+    body.innerHTML = `
+      <div class="field">
+        <label for="pwCurrent">Current password</label>
+        <input id="pwCurrent" type="password" autocomplete="current-password">
+      </div>
+      <div class="field">
+        <label for="pwNew">New password</label>
+        <input id="pwNew" type="password" autocomplete="new-password" minlength="6">
+      </div>
+      <div class="field">
+        <label for="pwConfirm">Confirm new password</label>
+        <input id="pwConfirm" type="password" autocomplete="new-password" minlength="6">
+      </div>
+      <div class="auth-actions">
+        <button id="pwSubmitBtn" class="btn btn-primary" type="button">Update password</button>
+        <button id="pwCancelBtn" class="btn btn-ghost" type="button">Cancel</button>
+      </div>
+      <div class="form-msg" id="pwMsg"></div>
+    `;
+
+    $("pwCancelBtn").onclick = () => { $("pwPanel").style.display = "none"; };
+
+    $("pwSubmitBtn").onclick = async () => {
+      const current = $("pwCurrent").value;
+      const next = $("pwNew").value;
+      const confirm = $("pwConfirm").value;
+      const msg = $("pwMsg");
+      const setMsg = (t, isErr) => { msg.innerText = t || ""; msg.className = "form-msg" + (t ? (isErr === false ? " ok" : " err") : ""); };
+
+      setMsg("");
+      if (!current || !next || !confirm) return setMsg("Fill in all three fields.", true);
+      if (next.length < 6) return setMsg("New password must be at least 6 characters.", true);
+      if (next !== confirm) return setMsg("New password and confirmation don't match.", true);
+
+      $("pwSubmitBtn").disabled = true;
+      try {
+        const credential = EmailAuthProvider.credential(currentUser.email, current);
+        await reauthenticateWithCredential(currentUser, credential);
+        await updatePassword(currentUser, next);
+        setMsg("Password updated.", false);
+        $("pwCurrent").value = ""; $("pwNew").value = ""; $("pwConfirm").value = "";
+      } catch (err) {
+        console.error(err);
+        setMsg(friendlyAuthError(err), true);
+      } finally {
+        $("pwSubmitBtn").disabled = false;
+      }
+    };
+  }
+
+  $("pwToggleBtn").onclick = () => {
+    const panel = $("pwPanel");
+    const showing = panel.style.display === "block";
+    if (showing) { panel.style.display = "none"; return; }
+    renderPwPanelBody();
+    panel.style.display = "block";
+  };
+
+  // ---------------- Auth state ----------------
   onAuthStateChanged(auth, (user) => {
     currentUser = user;
+    $("pwPanel").style.display = "none";
+
     if (user) {
-      document.getElementById("signInBtn").style.display = "none";
-      document.getElementById("guestNote").style.display = "none";
-      document.getElementById("emailDivider").style.display = "none";
-      document.getElementById("emailAuthBox").style.display = "none";
-      document.getElementById("userInfo").style.display = "flex";
-      document.getElementById("userPhoto").src = user.photoURL || "";
-      document.getElementById("userName").innerText = user.displayName || user.email;
+      $("authPanel").style.display = "none";
+      $("userBar").style.display = "flex";
+
+      if (user.photoURL) {
+        $("userPhoto").src = user.photoURL;
+        $("userPhoto").style.display = "block";
+        $("userInitial").style.display = "none";
+      } else {
+        $("userPhoto").style.display = "none";
+        $("userInitial").style.display = "flex";
+        $("userInitial").innerText = (user.displayName || user.email || "?").charAt(0).toUpperCase();
+      }
+      $("userName").innerText = user.displayName || user.email;
+
+      const verifyBanner = $("verifyBanner");
+      if (!isGoogleOnly(user) && !user.emailVerified) {
+        verifyBanner.style.display = "block";
+        verifyBanner.innerHTML = `Verify your email to confirm it's yours — <a href="#" id="resendVerifyLink">resend verification email</a>`;
+        $("resendVerifyLink").onclick = resendVerification;
+      } else {
+        verifyBanner.style.display = "none";
+      }
+
       loadHistory(user.uid);
     } else {
-      document.getElementById("signInBtn").style.display = "flex";
-      document.getElementById("guestNote").style.display = "block";
-      document.getElementById("emailDivider").style.display = "block";
-      document.getElementById("emailAuthBox").style.display = "block";
-      document.getElementById("userInfo").style.display = "none";
-      document.getElementById("historyBody").innerHTML = "<tr><td colspan='4' style='color:#6b7280;'>Sign in to see saved history.</td></tr>";
+      $("authPanel").style.display = "block";
+      $("userBar").style.display = "none";
+      $("verifyBanner").style.display = "none";
+      $("historyBody").innerHTML = "<tr class='empty-row'><td colspan='4'>Sign in to save your checks here.</td></tr>";
     }
   });
 
+  async function resendVerification(e) {
+    e.preventDefault();
+    if (!currentUser) return;
+    try {
+      await sendEmailVerification(currentUser);
+      $("verifyBanner").innerHTML = "Verification email sent — check your inbox.";
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  // ---------------- History ----------------
   function loadHistory(uid) {
     // Each user's checks live in their own subcollection (users/{uid}/checks)
     // instead of one shared "checks" collection filtered by a uid field.
-    // That avoids needing a Firestore composite index (uid + createdAt),
-    // which is what was silently breaking history before: the old query
-    // required an index that was never created, so it failed on every
-    // read with no visible error, and just looked like "no history."
+    // That avoids needing a Firestore composite index (uid + createdAt).
     const q = query(collection(db, "users", uid, "checks"), orderBy("createdAt", "desc"), limit(10));
     onSnapshot(
       q,
@@ -233,16 +509,14 @@
         snapshot.forEach((doc) => {
           const d = doc.data();
           const time = d.createdAt?.toDate ? d.createdAt.toDate().toLocaleTimeString() : "";
-          const icon = d.prediction === "Legitimate" ? "✅" : "🚨";
-          rows.push(`<tr><td>${time}</td><td style="word-break:break-all;">${d.url}</td><td>${icon} ${d.prediction}</td><td>${d.confidence}%</td></tr>`);
+          const label = d.prediction === "Legitimate" ? "Legitimate" : "Phishing";
+          rows.push(`<tr><td>${time}</td><td class="url-cell">${d.url}</td><td>${label}</td><td>${d.confidence}%</td></tr>`);
         });
-        document.getElementById("historyBody").innerHTML = rows.length ? rows.join("") : "<tr><td colspan='4' style='color:#6b7280;'>No checks yet.</td></tr>";
+        $("historyBody").innerHTML = rows.length ? rows.join("") : "<tr class='empty-row'><td colspan='4'>No checks yet.</td></tr>";
       },
       (error) => {
-        // Surface query/permission errors instead of failing silently.
         console.error("History query failed:", error);
-        document.getElementById("historyBody").innerHTML =
-          `<tr><td colspan='4' style='color:#ef4444;'>Couldn't load history: ${error.message}</td></tr>`;
+        $("historyBody").innerHTML = `<tr class="empty-row"><td colspan="4" style="color:var(--danger);">Couldn't load history: ${error.message}</td></tr>`;
       }
     );
   }
@@ -255,42 +529,55 @@
     }).catch((err) => console.error("Failed to save check:", err));
   }
 
+  // ---------------- Scanning ----------------
   async function checkUrl() {
-    const url = document.getElementById("urlInput").value.trim();
-    const resultDiv = document.getElementById("result");
+    const url = $("urlInput").value.trim();
+    const resultDiv = $("result");
+    const btn = $("checkBtn");
     if (!url) return;
 
-    resultDiv.style.display = "block";
-    resultDiv.className = "";
-    resultDiv.innerHTML = "Checking...";
+    btn.classList.add("scanning");
+    btn.disabled = true;
+    btn.querySelector(".label").innerText = "Scanning";
+    resultDiv.style.display = "none";
 
-    const res = await fetch("/predict", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url })
-    });
-    const data = await res.json();
+    try {
+      const res = await fetch("/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
 
-    if (data.error) {
-      resultDiv.innerText = data.error;
-      return;
+      if (data.error) {
+        resultDiv.style.display = "block";
+        resultDiv.className = "";
+        resultDiv.innerHTML = `<div class="result-label">${data.error}</div>`;
+        return;
+      }
+
+      const isLegit = data.prediction === "Legitimate";
+      const confidence = isLegit ? data.prob_legitimate : data.prob_phishing;
+      resultDiv.style.display = "block";
+      resultDiv.className = isLegit ? "legit" : "phish";
+      resultDiv.innerHTML = `
+        <div class="result-top">
+          <div class="result-label">${isLegit ? "Looks legitimate" : "Phishing detected"}</div>
+          <div class="result-conf">${(confidence * 100).toFixed(2)}% confidence</div>
+        </div>
+        <div class="result-url">${data.url}</div>
+      `;
+
+      saveCheck(data.url, data.prediction, (confidence * 100).toFixed(1));
+    } finally {
+      btn.classList.remove("scanning");
+      btn.disabled = false;
+      btn.querySelector(".label").innerText = "Scan";
     }
-
-    const isLegit = data.prediction === "Legitimate";
-    const confidence = isLegit ? data.prob_legitimate : data.prob_phishing;
-    resultDiv.className = isLegit ? "legit" : "phish";
-    resultDiv.innerHTML = `
-      <div class="result-icon">${isLegit ? "✅" : "🚨"}</div>
-      <div class="result-label">${isLegit ? "Legitimate" : "Phishing Detected"}</div>
-      <div class="result-conf">Confidence: ${(confidence * 100).toFixed(2)}%</div>
-      <div class="result-url">${data.url}</div>
-    `;
-
-    saveCheck(data.url, data.prediction, (confidence * 100).toFixed(1));
   }
 
-  document.getElementById("checkBtn").onclick = checkUrl;
-  document.getElementById("urlInput").addEventListener("keydown", (e) => { if (e.key === "Enter") checkUrl(); });
+  $("checkBtn").onclick = checkUrl;
+  $("urlInput").addEventListener("keydown", (e) => { if (e.key === "Enter") checkUrl(); });
 </script>
 </body>
 </html>
